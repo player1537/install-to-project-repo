@@ -1,13 +1,13 @@
 #!/usr/bin/python
 
 # Install to Project Repo
-# A script for installing jars to an in-project Maven repository. 
+# A script for installing jars to an in-project Maven repository.
 # v0.1.1
-# 
+#
 # MIT License
 # (c) 2012, Nikita Volkov. All rights reserved.
 # http://github.com/nikita-volkov/install-to-local-repo
-# 
+#
 
 
 import os
@@ -32,18 +32,23 @@ def parse_by_eclipse_standard(path):
     if snapshot:
       version = version[:-len(".snapshot")]
 
+    pomFile = os.path.join(os.path.dirname(path), file + '.pom')
+    if not os.path.exists(pomFile):
+      pomFile = None
+
     return {
       "group": group,
       "name": name,
       "version": version,
       "snapshot": snapshot,
-      "source": source
+      "source": source,
+      "pomFile": pomFile
     }
 
 def maven_dependencies(parsing_results):
   def artifact(parsing):
     return {
-      "groupId": parsing["group"], 
+      "groupId": parsing["group"],
       "artifactId": parsing["name"],
       "version": parsing["version"] + ("-SNAPSHOT" if parsing["snapshot"] else "")
     }
@@ -76,14 +81,15 @@ def install(path, parsing):
     " -Dpackaging=jar" + \
     " -DlocalRepositoryPath=repo" + \
     " -DcreateChecksum=true" + \
-    (" -Dclassifier=sources" if parsing["source"] else "")
+    (" -Dclassifier=sources" if parsing["source"] else "") + \
+    (" -DpomFile=" + parsing["pomFile"] if parsing["pomFile"] is not None else "")
   )
 
 
 def splits(str, splitter):
   parts = str.split(splitter)
   def split(i):
-    (l, r) = splitAt(parts, i) 
+    (l, r) = splitAt(parts, i)
     return (splitter.join(l), splitter.join(r))
 
   return map(split, range(1, len(parts)))
@@ -98,7 +104,7 @@ def splitAt(list, i):
 
 def name_to_version_alternatives(filename):
   return [
-    (n, v) 
+    (n, v)
     for (n, v) in splits(filename, "-") + splits(filename, "_")
     if v.lower() not in ["sources", "src", "snapshot"]
   ]
@@ -132,7 +138,7 @@ def name_parsing(name):
   else:
     return name, False
 
-def unzip(l): 
+def unzip(l):
   return tuple(zip(*l))
 
 def input_choice(labels, values):
@@ -168,7 +174,7 @@ def parse_interactively(path):
   else:
     (name, version) = alternatives[0]
 
-  
+
   alternatives = list(reversed(group_to_name_alternatives(name)))
   if not alternatives:
     print "Incorrect name format: `%s`. Skipping" % filename
@@ -197,11 +203,11 @@ def parse_interactively(path):
 from optparse import OptionParser
 
 parser = OptionParser()
-parser.add_option("-i", "--interactive", 
+parser.add_option("-i", "--interactive",
                   dest="interactive", action="store_true", default=False,
                   help="Interactively resolve ambiguous names. Use this option to install libraries of different naming standards")
-parser.add_option("-d", "--delete", 
-                  dest="delete", action="store_true", default=False, 
+parser.add_option("-d", "--delete",
+                  dest="delete", action="store_true", default=False,
                   help="Delete successfully installed libs in source location")
 (options, args) = parser.parse_args()
 
